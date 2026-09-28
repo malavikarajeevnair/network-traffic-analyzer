@@ -25,7 +25,3 @@ to explore computer networking and Python programming.
 - IP address analysis
 - Traffic visualization
 
-## Author
-
-Computer Science and Engineering
-Computer Networking
