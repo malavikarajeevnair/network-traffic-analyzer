@@ -1,14 +1,17 @@
 from scapy.all import sniff, IP, TCP, UDP, ICMP
 from collections import Counter
+import csv
+from datetime import datetime
 
 # ==========================================
 # NETWORK TRAFFIC ANALYZER
-# Version: 2.2
+# Version: 2.3
 # ==========================================
 
 packet_count = 0
 total_bytes = 0
 protocol_counts = Counter()
+captured_packets = []
 
 
 def analyze_packet(packet):
@@ -25,21 +28,66 @@ def analyze_packet(packet):
 
     if TCP in packet:
         protocol = "TCP"
+        source_port = packet[TCP].sport
+        destination_port = packet[TCP].dport
     elif UDP in packet:
         protocol = "UDP"
+        source_port = packet[UDP].sport
+        destination_port = packet[UDP].dport
     elif ICMP in packet:
         protocol = "ICMP"
+        source_port = ""
+        destination_port = ""
     else:
         protocol = "Other IP"
+        source_port = ""
+        destination_port = ""
+
+    size = len(packet)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     protocol_counts[protocol] += 1
+
+    captured_packets.append({
+        "timestamp": timestamp,
+        "source_ip": source,
+        "destination_ip": destination,
+        "protocol": protocol,
+        "source_port": source_port,
+        "destination_port": destination_port,
+        "size_bytes": size
+    })
 
     print(
         f"Packet {packet_count}: "
         f"{source} -> {destination} | "
-        f"{protocol} | "
-        f"{len(packet)} bytes"
+        f"{protocol} | {size} bytes"
     )
+
+
+def export_csv():
+    if not captured_packets:
+        print("\nNo packets available to export.")
+        return
+
+    filename = "captured_traffic.csv"
+
+    with open(filename, "w", newline="") as file:
+        fieldnames = [
+            "timestamp",
+            "source_ip",
+            "destination_ip",
+            "protocol",
+            "source_port",
+            "destination_port",
+            "size_bytes"
+        ]
+
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(captured_packets)
+
+    print(f"\nTraffic exported successfully to {filename}")
 
 
 def main():
@@ -108,6 +156,11 @@ def main():
         print(f"{protocol}: {count}")
 
     print("=" * 50)
+
+    export_choice = input("\nExport captured packets to CSV? (y/n): ")
+
+    if export_choice.lower() == "y":
+        export_csv()
 
 
 if __name__ == "__main__":
