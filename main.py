@@ -11,6 +11,7 @@ total_bytes = 0
 
 source_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
 destination_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
+packet_sizes = []
 
 
 def analyze_packet(packet):
@@ -55,6 +56,7 @@ def analyze_packet(packet):
     }
 
     packets.append(record)
+    packet_sizes.append(size)
 
     protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
     total_bytes += size
@@ -130,6 +132,21 @@ def show_ip_analysis():
         )
 
 
+def show_packet_size_analysis():
+    if not packet_sizes:
+        print("\nNo packet sizes available.")
+        return
+
+    average_size = sum(packet_sizes) / len(packet_sizes)
+    minimum_size = min(packet_sizes)
+    maximum_size = max(packet_sizes)
+
+    print("\n--- Packet Size Analysis ---")
+    print(f"Average packet size: {average_size:.2f} bytes")
+    print(f"Smallest packet: {minimum_size} bytes")
+    print(f"Largest packet: {maximum_size} bytes")
+
+
 def show_chart():
     if not protocol_counts:
         print("No traffic captured. There is nothing to visualize.")
@@ -143,6 +160,22 @@ def show_chart():
 
     plt.title("Network Traffic by Protocol")
     plt.xlabel("Protocol")
+    plt.ylabel("Number of Packets")
+    plt.grid(axis="y", linestyle="--", alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+def show_packet_size_chart():
+    if not packet_sizes:
+        print("No packet sizes available.")
+        return
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(packet_sizes, bins=20)
+
+    plt.title("Packet Size Distribution")
+    plt.xlabel("Packet Size (bytes)")
     plt.ylabel("Number of Packets")
     plt.grid(axis="y", linestyle="--", alpha=0.5)
     plt.tight_layout()
@@ -206,16 +239,24 @@ def main():
 
     show_statistics()
     show_ip_analysis()
+    show_packet_size_analysis()
 
     export_choice = input("\nExport packets to CSV? (y/n): ").lower()
 
     if export_choice == "y":
         export_csv()
 
-    chart_choice = input("\nShow traffic chart? (y/n): ").lower()
+    chart_choice = input("\nShow protocol chart? (y/n): ").lower()
 
     if chart_choice == "y":
         show_chart()
+
+    size_chart_choice = input(
+        "\nShow packet size distribution? (y/n): "
+    ).lower()
+
+    if size_chart_choice == "y":
+        show_packet_size_chart()
 
 
 if __name__ == "__main__":
