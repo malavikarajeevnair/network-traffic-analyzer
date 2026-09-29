@@ -1,21 +1,24 @@
 from scapy.all import sniff, IP, TCP, UDP, ICMP
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 import csv
 import matplotlib.pyplot as plt
+import time
 
 
 packets = []
-protocol_counts = {}
+protocol_counts = defaultdict(int)
 total_bytes = 0
 
 source_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
 destination_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
 packet_sizes = []
 
+# Packets captured in each one-second interval
+traffic_timeline = defaultdict(lambda: defaultdict(int))
 
-# Basic anomaly detection threshold
 PACKET_THRESHOLD = 100
+capture_start = None
 
 
 def analyze_packet(packet):
@@ -24,7 +27,7 @@ def analyze_packet(packet):
     if IP not in packet:
         return
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now()
     source = packet[IP].src
     destination = packet[IP].dst
     size = len(packet)
@@ -33,24 +36,21 @@ def analyze_packet(packet):
         protocol = "TCP"
         source_port = packet[TCP].sport
         destination_port = packet[TCP].dport
-
     elif UDP in packet:
         protocol = "UDP"
         source_port = packet[UDP].sport
         destination_port = packet[UDP].dport
-
     elif ICMP in packet:
         protocol = "ICMP"
         source_port = "-"
         destination_port = "-"
-
     else:
         protocol = "Other IP"
         source_port = "-"
         destination_port = "-"
 
     record = {
-        "Timestamp": timestamp,
+        "Timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S.%f"),
         "Source": source,
         "Destination": destination,
         "Protocol": protocol,
@@ -62,7 +62,7 @@ def analyze_packet(packet):
     packets.append(record)
     packet_sizes.append(size)
 
-    protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+    protocol_counts[protocol] += 1
     total_bytes += size
 
     source_stats[source]["packets"] += 1
@@ -71,8 +71,14 @@ def analyze_packet(packet):
     destination_stats[destination]["packets"] += 1
     destination_stats[destination]["bytes"] += size
 
+    # Group packets into one-second intervals
+    if capture_start is not None:
+        elapsed = int((time.monotonic() - capture_start))
+        traffic_timeline[elapsed][protocol] += 1
+
     print(
-        f"{timestamp} | {source} -> {destination} | "
+        f"{timestamp.strftime('%H:%M:%S')} | "
+        f"{source} -> {destination} | "
         f"{protocol} | {size} bytes"
     )
 
@@ -108,7 +114,6 @@ def show_ip_analysis():
         return
 
     print("\n--- Top 5 Source IP Addresses ---")
-
     top_sources = sorted(
         source_stats.items(),
         key=lambda item: item[1]["packets"],
@@ -122,7 +127,6 @@ def show_ip_analysis():
         )
 
     print("\n--- Top 5 Destination IP Addresses ---")
-
     top_destinations = sorted(
         destination_stats.items(),
         key=lambda item: item[1]["packets"],
@@ -141,10 +145,8 @@ def show_packet_size_analysis():
         print("\nNo packet sizes available.")
         return
 
-    average_size = sum(packet_sizes) / len(packet_sizes)
-
     print("\n--- Packet Size Analysis ---")
-    print(f"Average packet size: {average_size:.2f} bytes")
+    print(f"Average packet size: {sum(packet_sizes) / len(packet_sizes):.2f} bytes")
     print(f"Smallest packet: {min(packet_sizes)} bytes")
     print(f"Largest packet: {max(packet_sizes)} bytes")
 
@@ -153,39 +155,29 @@ def detect_anomalies():
     print("\n--- Basic Anomaly Detection ---")
     print(f"Packet threshold: {PACKET_THRESHOLD}")
 
-    suspicious_ips = []
-
-    for ip, stats in source_stats.items():
-        if stats["packets"] > PACKET_THRESHOLD:
-            suspicious_ips.append((ip, stats["packets"]))
+    suspicious_ips = [
+        (ip, stats["packets"])
+        for ip, stats in source_stats.items()
+        if stats["packets"] > PACKET_THRESHOLD
+    ]
 
     if suspicious_ips:
         print("\nHigh packet counts detected:")
-
         for ip, count in suspicious_ips:
-            print(
-                f"WARNING: {ip} sent {count} packets "
-                f"during the capture."
-            )
+            print(f"WARNING: {ip} sent {count} packets.")
     else:
         print("No IP addresses exceeded the packet threshold.")
 
-    print(
-        "\nNote: High packet counts are not proof of malicious activity."
-    )
+    print("Note: High packet counts do not prove malicious activity.")
 
 
 def show_chart():
     if not protocol_counts:
-        print("No traffic captured. There is nothing to visualize.")
+        print("No traffic captured.")
         return
 
-    protocols = list(protocol_counts.keys())
-    counts = list(protocol_counts.values())
-
     plt.figure(figsize=(8, 5))
-    plt.bar(protocols, counts)
-
+    plt.bar(protocol_counts.keys(), protocol_counts.values())
     plt.title("Network Traffic by Protocol")
     plt.xlabel("Protocol")
     plt.ylabel("Number of Packets")
@@ -201,7 +193,6 @@ def show_packet_size_chart():
 
     plt.figure(figsize=(8, 5))
     plt.hist(packet_sizes, bins=20)
-
     plt.title("Packet Size Distribution")
     plt.xlabel("Packet Size (bytes)")
     plt.ylabel("Number of Packets")
@@ -210,9 +201,39 @@ def show_packet_size_chart():
     plt.show()
 
 
-def main():
-    print("=== Network Traffic Analyzer ===")
+def show_traffic_timeline():
+    if not traffic_timeline:
+        print("No traffic timeline available.")
+        return
 
+    duration = max(traffic_timeline.keys()) + 1
+    seconds = list(range(duration))
+
+    protocols = sorted(protocol_counts.keys())
+
+    plt.figure(figsize=(10, 5))
+
+    for protocol in protocols:
+        counts = [
+            traffic_timeline[second].get(protocol, 0)
+            for second in seconds
+        ]
+        plt.plot(seconds, counts, marker="o", label=protocol)
+
+    plt.title("Network Traffic Over Time")
+    plt.xlabel("Seconds Since Capture Started")
+    plt.ylabel("Packets per Second")
+    plt.xticks(seconds)
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def main():
+    global capture_start
+
+    print("=== Network Traffic Analyzer ===")
     print("\nChoose a protocol:")
     print("1. All IP traffic")
     print("2. TCP")
@@ -234,20 +255,17 @@ def main():
 
     try:
         duration = int(input("Enter capture duration in seconds: "))
-
         if duration <= 0:
             print("Duration must be greater than zero.")
             return
-
     except ValueError:
         print("Please enter a valid number.")
         return
 
-    print(
-        f"\nCapturing {filters[choice]} traffic "
-        f"for {duration} seconds..."
-    )
+    print(f"\nCapturing {filters[choice]} traffic for {duration} seconds...")
     print("Press Ctrl+C to stop early.\n")
+
+    capture_start = time.monotonic()
 
     try:
         sniff(
@@ -256,11 +274,8 @@ def main():
             timeout=duration,
             store=False
         )
-
-    except PermissionError:
-        print("Permission denied. Try running IDLE as administrator.")
-        return
-
+    except KeyboardInterrupt:
+        print("\nCapture stopped by user.")
     except Exception as error:
         print(f"Capture error: {error}")
         return
@@ -270,22 +285,17 @@ def main():
     show_packet_size_analysis()
     detect_anomalies()
 
-    export_choice = input("\nExport packets to CSV? (y/n): ").lower()
-
-    if export_choice == "y":
+    if input("\nExport packets to CSV? (y/n): ").lower() == "y":
         export_csv()
 
-    chart_choice = input("\nShow protocol chart? (y/n): ").lower()
-
-    if chart_choice == "y":
+    if input("\nShow protocol chart? (y/n): ").lower() == "y":
         show_chart()
 
-    size_chart_choice = input(
-        "\nShow packet size distribution? (y/n): "
-    ).lower()
-
-    if size_chart_choice == "y":
+    if input("\nShow packet size chart? (y/n): ").lower() == "y":
         show_packet_size_chart()
+
+    if input("\nShow traffic timeline? (y/n): ").lower() == "y":
+        show_traffic_timeline()
 
 
 if __name__ == "__main__":
