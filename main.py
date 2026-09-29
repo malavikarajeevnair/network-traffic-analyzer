@@ -1,107 +1,121 @@
 from scapy.all import sniff, IP, TCP, UDP, ICMP
-from collections import Counter
-import csv
 from datetime import datetime
+import csv
+import matplotlib.pyplot as plt
 
-# ==========================================
-# NETWORK TRAFFIC ANALYZER
-# Version: 2.3
-# ==========================================
 
-packet_count = 0
+packets = []
+protocol_counts = {}
 total_bytes = 0
-protocol_counts = Counter()
-captured_packets = []
 
 
 def analyze_packet(packet):
-    global packet_count, total_bytes
+    global total_bytes
 
     if IP not in packet:
         return
 
-    packet_count += 1
-    total_bytes += len(packet)
-
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     source = packet[IP].src
     destination = packet[IP].dst
+    size = len(packet)
 
     if TCP in packet:
         protocol = "TCP"
         source_port = packet[TCP].sport
         destination_port = packet[TCP].dport
+
     elif UDP in packet:
         protocol = "UDP"
         source_port = packet[UDP].sport
         destination_port = packet[UDP].dport
+
     elif ICMP in packet:
         protocol = "ICMP"
-        source_port = ""
-        destination_port = ""
+        source_port = "-"
+        destination_port = "-"
+
     else:
         protocol = "Other IP"
-        source_port = ""
-        destination_port = ""
+        source_port = "-"
+        destination_port = "-"
 
-    size = len(packet)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    record = {
+        "Timestamp": timestamp,
+        "Source": source,
+        "Destination": destination,
+        "Protocol": protocol,
+        "Source Port": source_port,
+        "Destination Port": destination_port,
+        "Size": size
+    }
 
-    protocol_counts[protocol] += 1
+    packets.append(record)
 
-    captured_packets.append({
-        "timestamp": timestamp,
-        "source_ip": source,
-        "destination_ip": destination,
-        "protocol": protocol,
-        "source_port": source_port,
-        "destination_port": destination_port,
-        "size_bytes": size
-    })
+    protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+    total_bytes += size
 
     print(
-        f"Packet {packet_count}: "
-        f"{source} -> {destination} | "
+        f"{timestamp} | {source} -> {destination} | "
         f"{protocol} | {size} bytes"
     )
 
 
 def export_csv():
-    if not captured_packets:
-        print("\nNo packets available to export.")
+    if not packets:
+        print("No packets to export.")
         return
 
     filename = "captured_traffic.csv"
 
     with open(filename, "w", newline="") as file:
-        fieldnames = [
-            "timestamp",
-            "source_ip",
-            "destination_ip",
-            "protocol",
-            "source_port",
-            "destination_port",
-            "size_bytes"
-        ]
-
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer = csv.DictWriter(file, fieldnames=packets[0].keys())
         writer.writeheader()
-        writer.writerows(captured_packets)
+        writer.writerows(packets)
 
-    print(f"\nTraffic exported successfully to {filename}")
+    print(f"Traffic exported to {filename}")
+
+
+def show_statistics():
+    print("\n--- Traffic Statistics ---")
+    print(f"Total packets: {len(packets)}")
+    print(f"Total data: {total_bytes} bytes")
+
+    print("\nPackets by protocol:")
+    for protocol, count in protocol_counts.items():
+        print(f"{protocol}: {count}")
+
+
+def show_chart():
+    if not protocol_counts:
+        print("No traffic captured. There is nothing to visualize.")
+        return
+
+    protocols = list(protocol_counts.keys())
+    counts = list(protocol_counts.values())
+
+    plt.figure(figsize=(8, 5))
+    plt.bar(protocols, counts)
+
+    plt.title("Network Traffic by Protocol")
+    plt.xlabel("Protocol")
+    plt.ylabel("Number of Packets")
+    plt.grid(axis="y", linestyle="--", alpha=0.5)
+    plt.tight_layout()
+
+    plt.show()
 
 
 def main():
-    print("=" * 50)
-    print("          NETWORK TRAFFIC ANALYZER")
-    print("=" * 50)
+    print("=== Network Traffic Analyzer ===")
 
-    print("\nSelect a protocol to capture:")
+    print("\nChoose a protocol:")
     print("1. All IP traffic")
     print("2. TCP")
     print("3. UDP")
     print("4. ICMP")
 
-    choice = input("\nEnter your choice (1-4): ")
+    choice = input("Enter your choice (1-4): ")
 
     filters = {
         "1": "ip",
@@ -114,53 +128,47 @@ def main():
         print("Invalid choice.")
         return
 
-    selected_filter = filters[choice]
-
     try:
-        duration = int(input("Capture duration in seconds: "))
+        duration = int(input("Enter capture duration in seconds: "))
 
         if duration <= 0:
             print("Duration must be greater than zero.")
             return
 
     except ValueError:
-        print("Please enter a valid whole number.")
+        print("Please enter a valid number.")
         return
 
-    print(f"\nCapturing {selected_filter.upper()} traffic")
-    print(f"Duration: {duration} seconds")
-    print("Please wait...\n")
+    print(f"\nCapturing {filters[choice]} traffic for {duration} seconds...")
+    print("Press Ctrl+C to stop early.\n")
 
     try:
         sniff(
-            filter=selected_filter,
+            filter=filters[choice],
             prn=analyze_packet,
-            store=False,
-            timeout=duration
+            timeout=duration,
+            store=False
         )
 
-    except Exception as error:
-        print("\nCapture error:", error)
+    except PermissionError:
+        print("Permission denied. Try running IDLE as administrator.")
         return
 
-    print("\nCapture completed.")
+    except Exception as error:
+        print(f"Capture error: {error}")
+        return
 
-    print("\nNETWORK TRAFFIC REPORT")
-    print("-" * 50)
-    print("Total packets:", packet_count)
-    print("Total data:", total_bytes, "bytes")
+    show_statistics()
 
-    print("\nProtocol breakdown:")
+    export_choice = input("\nExport packets to CSV? (y/n): ").lower()
 
-    for protocol, count in protocol_counts.items():
-        print(f"{protocol}: {count}")
-
-    print("=" * 50)
-
-    export_choice = input("\nExport captured packets to CSV? (y/n): ")
-
-    if export_choice.lower() == "y":
+    if export_choice == "y":
         export_csv()
+
+    chart_choice = input("\nShow traffic chart? (y/n): ").lower()
+
+    if chart_choice == "y":
+        show_chart()
 
 
 if __name__ == "__main__":
