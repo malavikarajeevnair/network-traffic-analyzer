@@ -14,6 +14,10 @@ destination_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
 packet_sizes = []
 
 
+# Basic anomaly detection threshold
+PACKET_THRESHOLD = 100
+
+
 def analyze_packet(packet):
     global total_bytes
 
@@ -138,13 +142,37 @@ def show_packet_size_analysis():
         return
 
     average_size = sum(packet_sizes) / len(packet_sizes)
-    minimum_size = min(packet_sizes)
-    maximum_size = max(packet_sizes)
 
     print("\n--- Packet Size Analysis ---")
     print(f"Average packet size: {average_size:.2f} bytes")
-    print(f"Smallest packet: {minimum_size} bytes")
-    print(f"Largest packet: {maximum_size} bytes")
+    print(f"Smallest packet: {min(packet_sizes)} bytes")
+    print(f"Largest packet: {max(packet_sizes)} bytes")
+
+
+def detect_anomalies():
+    print("\n--- Basic Anomaly Detection ---")
+    print(f"Packet threshold: {PACKET_THRESHOLD}")
+
+    suspicious_ips = []
+
+    for ip, stats in source_stats.items():
+        if stats["packets"] > PACKET_THRESHOLD:
+            suspicious_ips.append((ip, stats["packets"]))
+
+    if suspicious_ips:
+        print("\nHigh packet counts detected:")
+
+        for ip, count in suspicious_ips:
+            print(
+                f"WARNING: {ip} sent {count} packets "
+                f"during the capture."
+            )
+    else:
+        print("No IP addresses exceeded the packet threshold.")
+
+    print(
+        "\nNote: High packet counts are not proof of malicious activity."
+    )
 
 
 def show_chart():
@@ -240,6 +268,7 @@ def main():
     show_statistics()
     show_ip_analysis()
     show_packet_size_analysis()
+    detect_anomalies()
 
     export_choice = input("\nExport packets to CSV? (y/n): ").lower()
 
