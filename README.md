@@ -1,23 +1,32 @@
 # Network Traffic Analyzer
 
 A Python-based network traffic analyzer that captures,
-filters, and visualizes live network packets using Scapy
-and Matplotlib.
+analyzes, and visualizes live network packets.
+
+The project uses Scapy for packet capture and analysis,
+and Matplotlib for traffic visualization.
 
 ## Features
 
 - Live network packet capture
-- Protocol filtering (TCP, UDP, ICMP, and all IP traffic)
-- Configurable packet capture duration
-- Packet statistics and total data calculation
-- CSV export of captured packet metadata
-- Graphical visualization of traffic by protocol
+- TCP, UDP, ICMP, and all-IP traffic filtering
+- Configurable capture duration
+- Packet counts and total traffic statistics
+- Source and destination IP analysis
+- Top 5 source and destination IP addresses
+- Packet-size statistics
+- Protocol traffic visualization
+- Packet-size distribution histogram
+- CSV export of packet metadata
+- Basic packet-count anomaly detection
+- Automated unit tests
 
-## Technologies Used
+## Technologies
 
 - Python
 - Scapy
 - Matplotlib
+- unittest
 - CSV
 
 ## Requirements
@@ -29,59 +38,79 @@ and Matplotlib.
 
 ## Installation
 
-1. Clone this repository:
+Clone the repository:
 
-   git clone (https://github.com/malavikarajeevnair/network-traffic-analyzer)
+    git clone (https://github.com/malavikarajeevnair/network-traffic-analyzer.git)
 
-2. Navigate to the project directory:
+Navigate to the project directory:
 
-   cd network-traffic-analyzer
+    cd network-traffic-analyzer
 
-3. Install the dependencies:
+Install dependencies:
 
-   python -m pip install -r requirements.txt
+    python -m pip install -r requirements.txt
 
 ## Usage
 
-Run the program:
+Run the analyzer:
 
     python main.py
 
-Choose a protocol to capture:
-- All IP traffic
-- TCP
-- UDP
-- ICMP
+Choose a traffic filter and enter the capture duration.
 
-Enter the capture duration in seconds.
+After capturing traffic, the program displays:
+- Total packets
+- Total captured bytes
+- Protocol distribution
+- Top source and destination IP addresses
+- Packet-size statistics
+- Basic anomaly detection results
 
-After the capture finishes, the program displays
-traffic statistics and offers CSV export and
-graphical visualization.
+You can also export packet metadata to CSV and
+display traffic charts.
 
-## Output
+## Running Tests
 
-The analyzer provides:
-- Total packets captured
-- Total captured data in bytes
-- Packet counts by protocol
-- CSV file containing packet metadata
-- Bar chart showing traffic by protocol
+Run the automated tests with:
+
+    python -m unittest test_analyzer.py
+
+The tests cover packet classification, packet-size
+tracking, byte counting, and anomaly-threshold logic.
+
+## Anomaly Detection
+
+The analyzer includes a basic rule-based detector
+that flags source IP addresses exceeding a configured
+packet-count threshold.
+
+This is a demonstration of simple anomaly detection.
+It is not a complete intrusion detection system.
+
+## Project Structure
+
+    network-traffic-analyzer/
+    |
+    |-- main.py
+    |-- test_analyzer.py
+    |-- requirements.txt
+    |-- README.md
 
 ## Limitations
 
-- Requires appropriate permissions for packet capture.
-- Captures packet metadata, not full traffic payloads.
-- Basic protocol classification is used.
-- Does not currently provide advanced intrusion detection.
+- Requires appropriate permissions for live capture.
+- Captures packet metadata rather than application payloads.
+- Anomaly detection uses a fixed packet-count threshold.
+- High packet counts do not necessarily indicate malicious activity.
+- Live capture and automated tests are separate operations.
 
 ## Future Improvements
 
-- IP address-based traffic analysis
-- Packet size distribution
-- Top communicating hosts
-- Basic anomaly detection
-- Automated testing
+- Configurable anomaly thresholds
+- Traffic analysis over time
+- More advanced anomaly detection
+- Improved graphical interface
+- Additional automated tests
 
 ## Disclaimer
 
