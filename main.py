@@ -3,7 +3,7 @@ from collections import Counter
 
 # ==========================================
 # NETWORK TRAFFIC ANALYZER
-# Version: 2.1
+# Version: 2.2
 # ==========================================
 
 packet_count = 0
@@ -68,22 +68,34 @@ def main():
 
     selected_filter = filters[choice]
 
-    print(f"\nCapturing {selected_filter.upper()} traffic...")
-    print("Press Ctrl+C to stop.\n")
+    try:
+        duration = int(input("Capture duration in seconds: "))
+
+        if duration <= 0:
+            print("Duration must be greater than zero.")
+            return
+
+    except ValueError:
+        print("Please enter a valid whole number.")
+        return
+
+    print(f"\nCapturing {selected_filter.upper()} traffic")
+    print(f"Duration: {duration} seconds")
+    print("Please wait...\n")
 
     try:
         sniff(
             filter=selected_filter,
             prn=analyze_packet,
-            store=False
+            store=False,
+            timeout=duration
         )
-
-    except KeyboardInterrupt:
-        print("\nCapture stopped.")
 
     except Exception as error:
         print("\nCapture error:", error)
         return
+
+    print("\nCapture completed.")
 
     print("\nNETWORK TRAFFIC REPORT")
     print("-" * 50)
