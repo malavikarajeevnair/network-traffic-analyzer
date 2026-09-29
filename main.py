@@ -1,55 +1,72 @@
-# ==========================================
+from scapy.all import sniff, IP, TCP, UDP, ICMP
+from collections import Counter
+
 # NETWORK TRAFFIC ANALYZER
-# Version: 1.0
-# ==========================================
+# Version: 2.0
 
-# Sample network packets
-packets = [
-    {"protocol": "TCP", "size": 500},
-    {"protocol": "UDP", "size": 300},
-    {"protocol": "TCP", "size": 750},
-    {"protocol": "ICMP", "size": 100},
-    {"protocol": "UDP", "size": 400},
-]
-
-# Initialize counters
-tcp_count = 0
-udp_count = 0
-icmp_count = 0
+packet_count = 0
 total_bytes = 0
+protocol_counts = Counter()
 
-# Analyze packets
-for packet in packets:
 
-    protocol = packet["protocol"]
-    size = packet["size"]
+def analyze_packet(packet):
+    global packet_count, total_bytes
 
-    total_bytes += size
+    packet_count += 1
+    total_bytes += len(packet)
 
-    if protocol == "TCP":
-        tcp_count += 1
+    if IP in packet:
+        source = packet[IP].src
+        destination = packet[IP].dst
 
-    elif protocol == "UDP":
-        udp_count += 1
+        if TCP in packet:
+            protocol = "TCP"
+        elif UDP in packet:
+            protocol = "UDP"
+        elif ICMP in packet:
+            protocol = "ICMP"
+        else:
+            protocol = "Other IP"
 
-    elif protocol == "ICMP":
-        icmp_count += 1
+        protocol_counts[protocol] += 1
 
-# Display the report
-print("=" * 40)
-print("       NETWORK TRAFFIC ANALYZER")
-print("=" * 40)
+        print(
+            f"Packet {packet_count}: "
+            f"{source} -> {destination} | "
+            f"{protocol} | "
+            f"{len(packet)} bytes"
+        )
 
-print("\nNETWORK TRAFFIC REPORT")
-print("-" * 40)
 
-print("TCP packets:", tcp_count)
-print("UDP packets:", udp_count)
-print("ICMP packets:", icmp_count)
+def main():
+    print("=" * 50)
+    print("          NETWORK TRAFFIC ANALYZER")
+    print("=" * 50)
 
-print("-" * 40)
+    print("\nCapturing network traffic...")
+    print("Press Ctrl+C to stop capturing.\n")
 
-print("Total packets:", len(packets))
-print("Total data:", total_bytes, "bytes")
+    try:
+        sniff(
+            prn=analyze_packet,
+            store=False
+        )
 
-print("=" * 40)
+    except KeyboardInterrupt:
+        print("\nCapture stopped.")
+
+    print("\nNETWORK TRAFFIC REPORT")
+    print("-" * 50)
+    print("Total packets:", packet_count)
+    print("Total data:", total_bytes, "bytes")
+
+    print("\nProtocol breakdown:")
+
+    for protocol, count in protocol_counts.items():
+        print(f"{protocol}: {count}")
+
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    main()
