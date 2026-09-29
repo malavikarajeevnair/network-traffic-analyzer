@@ -20,6 +20,21 @@ and Matplotlib for traffic visualization.
 - CSV export of packet metadata
 - Basic packet-count anomaly detection
 - Automated unit tests
+- 
+## Screenshots
+
+### Network traffic by protocol
+
+<img width="1902" height="1122" alt="Screenshot 2026-09-30 002308" src="https://github.com/user-attachments/assets/7afa8cc8-fc69-452f-858c-f76984326cf1" />
+
+### Packet size distribution
+
+<img width="1919" height="1125" alt="Screenshot 2026-09-30 002324" src="https://github.com/user-attachments/assets/e56d7f0e-5594-4510-ac3f-3400816eeb37" />
+
+### Network traffic over time
+
+<img width="1919" height="1120" alt="Screenshot 2026-09-30 002337" src="https://github.com/user-attachments/assets/35fc6909-0b3c-4e45-b060-d6b5746b7360" />
+
 
 ## Technologies
 
