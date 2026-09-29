@@ -1,5 +1,6 @@
 from scapy.all import sniff, IP, TCP, UDP, ICMP
 from datetime import datetime
+from collections import defaultdict
 import csv
 import matplotlib.pyplot as plt
 
@@ -7,6 +8,9 @@ import matplotlib.pyplot as plt
 packets = []
 protocol_counts = {}
 total_bytes = 0
+
+source_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
+destination_stats = defaultdict(lambda: {"packets": 0, "bytes": 0})
 
 
 def analyze_packet(packet):
@@ -55,6 +59,12 @@ def analyze_packet(packet):
     protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
     total_bytes += size
 
+    source_stats[source]["packets"] += 1
+    source_stats[source]["bytes"] += size
+
+    destination_stats[destination]["packets"] += 1
+    destination_stats[destination]["bytes"] += size
+
     print(
         f"{timestamp} | {source} -> {destination} | "
         f"{protocol} | {size} bytes"
@@ -86,6 +96,40 @@ def show_statistics():
         print(f"{protocol}: {count}")
 
 
+def show_ip_analysis():
+    if not packets:
+        print("\nNo IP traffic captured.")
+        return
+
+    print("\n--- Top 5 Source IP Addresses ---")
+
+    top_sources = sorted(
+        source_stats.items(),
+        key=lambda item: item[1]["packets"],
+        reverse=True
+    )[:5]
+
+    for ip, stats in top_sources:
+        print(
+            f"{ip}: {stats['packets']} packets, "
+            f"{stats['bytes']} bytes sent"
+        )
+
+    print("\n--- Top 5 Destination IP Addresses ---")
+
+    top_destinations = sorted(
+        destination_stats.items(),
+        key=lambda item: item[1]["packets"],
+        reverse=True
+    )[:5]
+
+    for ip, stats in top_destinations:
+        print(
+            f"{ip}: {stats['packets']} packets, "
+            f"{stats['bytes']} bytes received"
+        )
+
+
 def show_chart():
     if not protocol_counts:
         print("No traffic captured. There is nothing to visualize.")
@@ -102,7 +146,6 @@ def show_chart():
     plt.ylabel("Number of Packets")
     plt.grid(axis="y", linestyle="--", alpha=0.5)
     plt.tight_layout()
-
     plt.show()
 
 
@@ -139,7 +182,10 @@ def main():
         print("Please enter a valid number.")
         return
 
-    print(f"\nCapturing {filters[choice]} traffic for {duration} seconds...")
+    print(
+        f"\nCapturing {filters[choice]} traffic "
+        f"for {duration} seconds..."
+    )
     print("Press Ctrl+C to stop early.\n")
 
     try:
@@ -159,6 +205,7 @@ def main():
         return
 
     show_statistics()
+    show_ip_analysis()
 
     export_choice = input("\nExport packets to CSV? (y/n): ").lower()
 
