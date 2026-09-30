@@ -119,15 +119,16 @@ It is not a complete intrusion detection system.
 - High packet counts do not necessarily indicate malicious activity.
 - Live capture and automated tests are separate operations.
 
-## Future Improvements
+## Current Project Status
 
-- Configurable anomaly thresholds
-- Traffic analysis over time
-- More advanced anomaly detection
-- Improved graphical interface
-- Additional automated tests
+The project currently supports packet capture, protocol analysis,
+traffic statistics, CSV export, and basic anomaly detection.
+
+Future improvements may include a graphical interface and
+additional network analysis features.
 
 ## Disclaimer
 
 Use this tool only on networks you own or have
 permission to monitor.
+
